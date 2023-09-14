@@ -1,0 +1,5 @@
+model_name: mVAE
+cfg: ./single_view.yaml
+input_dim:
+- 152
+z_dim: null

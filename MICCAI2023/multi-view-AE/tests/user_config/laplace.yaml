@@ -1,0 +1,14 @@
+# @package _global_
+
+model:
+  sparse: False
+
+encoder:
+  default:  
+    enc_dist:
+      _target_: multiviewae.base.distributions.Normal
+
+decoder:
+  default:
+    dec_dist:
+      _target_: multiviewae.base.distributions.Laplace

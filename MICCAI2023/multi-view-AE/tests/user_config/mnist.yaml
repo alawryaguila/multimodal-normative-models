@@ -1,0 +1,17 @@
+# @package _global_
+
+model:
+  private: True
+
+encoder:
+  default:
+    hidden_layer_dim: [256, 256]
+    non_linear: True
+
+decoder:
+  default:
+    _target_: multiviewae.architectures.mlp.Decoder
+    non_linear: True
+    hidden_layer_dim: [256, 256]
+    dec_dist:
+      _target_: multiviewae.base.distributions.Bernoulli

@@ -1,0 +1,6 @@
+model_name: mmVAE
+cfg: ./multi_view.yaml
+input_dim:
+- 82
+- 70
+z_dim: null

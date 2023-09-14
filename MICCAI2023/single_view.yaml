@@ -1,0 +1,36 @@
+# @package _global_
+
+model:
+  z_dim: 10
+  beta: 1
+  learning_rate: 0.0001
+encoder:
+  default:
+    bias: True
+    non_linear: True
+    hidden_layer_dim: [40, 20]
+    enc_dist:
+      _target_: multiviewae.base.distributions.Normal
+decoder:
+  default:
+    bias: True
+    non_linear: True
+    hidden_layer_dim: [20, 40]
+    init_logvar: -3
+    dec_dist:
+      _target_: multiviewae.base.distributions.Normal
+
+callbacks:
+  model_checkpoint:
+    _target_: pytorch_lightning.callbacks.ModelCheckpoint
+    monitor: "val_loss"
+    mode: "min"
+    save_last: True
+
+  early_stopping:
+    _target_: pytorch_lightning.callbacks.EarlyStopping
+    monitor: "val_loss"
+    mode: "min"
+    patience: 50
+    min_delta: 0.001
+    verbose: True

@@ -1,0 +1,86 @@
+model:
+  use_GPU: false
+  save_model: false
+  seed_everything: true
+  seed: 42
+  z_dim: 10
+  learning_rate: 0.0001
+  sparse: false
+  threshold: 0.2
+  beta: 1
+  join_type: PoE
+datamodule:
+  _target_: multiviewae.base.dataloaders.MultiviewDataModule
+  batch_size: null
+  is_validate: true
+  train_size: 0.9
+  dataset:
+    _target_: multiviewae.base.datasets.MVDataset
+encoder:
+  default:
+    _target_: multiviewae.architectures.mlp.VariationalEncoder
+    hidden_layer_dim:
+    - 40
+    - 20
+    bias: true
+    non_linear: true
+    enc_dist:
+      _target_: multiviewae.base.distributions.Normal
+  enc0:
+    _target_: multiviewae.architectures.mlp.VariationalEncoder
+    hidden_layer_dim:
+    - 40
+    - 20
+    bias: true
+    non_linear: true
+    enc_dist:
+      _target_: multiviewae.base.distributions.Normal
+decoder:
+  default:
+    _target_: multiviewae.architectures.mlp.VariationalDecoder
+    hidden_layer_dim:
+    - 20
+    - 40
+    bias: true
+    non_linear: true
+    dec_dist:
+      _target_: multiviewae.base.distributions.Normal
+    init_logvar: -3
+  dec0:
+    _target_: multiviewae.architectures.mlp.VariationalDecoder
+    hidden_layer_dim:
+    - 20
+    - 40
+    bias: true
+    non_linear: true
+    dec_dist:
+      _target_: multiviewae.base.distributions.Normal
+    init_logvar: -3
+prior:
+  _target_: multiviewae.base.distributions.Normal
+  loc: 0.0
+  scale: 1.0
+trainer:
+  _target_: pytorch_lightning.Trainer
+  gpus: 1
+  max_epochs: 10
+  deterministic: false
+  log_every_n_steps: 2
+  resume_from_checkpoint: null
+callbacks:
+  model_checkpoint:
+    _target_: pytorch_lightning.callbacks.ModelCheckpoint
+    monitor: val_loss
+    mode: min
+    save_last: true
+    dirpath: ${out_dir}
+  early_stopping:
+    _target_: pytorch_lightning.callbacks.EarlyStopping
+    monitor: val_loss
+    mode: min
+    patience: 50
+    min_delta: 0.001
+    verbose: true
+logger:
+  _target_: pytorch_lightning.loggers.tensorboard.TensorBoardLogger
+  save_dir: ${out_dir}/logs
