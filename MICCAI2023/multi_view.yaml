@@ -3,7 +3,9 @@
 model:
   z_dim: 10
   beta: 1
-  K: 1
+  use_prior: False #mVAE only parameter
+  warmup: 0 #mVAE only parameter
+  K: 1 #mmVAE only parameter
   learning_rate: 0.0001
 encoder:
   default:
