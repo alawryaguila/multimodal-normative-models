@@ -11,12 +11,6 @@ All models were trained on a machine with Intel i7-10750H CPU and 1 Intel UHD Gr
 ## Installation and running scripts
 
 ### Installation
-Clone repository and move to folder:
-```bash
-git clone https://github.com/alawryaguila/multi-view-AE
-cd multi-view-AE
-```
-
 Create the customised python environment:
 ```bash
 conda create --name MICCAI23 python=3.9
@@ -29,7 +23,7 @@ conda activate MICCAI23
 
 Install the package:
 ```bash
-pip install -e ./
+pip install multiviewae
 ```
 
 Example of how to run scripts:
