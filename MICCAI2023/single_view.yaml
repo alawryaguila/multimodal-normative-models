@@ -2,6 +2,8 @@
 
 model:
   z_dim: 10
+  use_prior: False #mVAE only parameter
+  warmup: 0 #mVAE only parameter
   beta: 1
   learning_rate: 0.0001
 encoder:
