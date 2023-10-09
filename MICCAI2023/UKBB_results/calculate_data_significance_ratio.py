@@ -14,27 +14,35 @@ from sklearn.covariance import MinCovDet
 
 def deviation_sig_count(cohort_recon, holdout_recon, train_recon, key, cols, title='', zscore=True):
     if zscore:
-        thresh = 0.05
-        cohort_recon = np.mean(cohort_recon, axis=1)
-        holdout_recon = np.mean(holdout_recon, axis=1)
-        mean_holdout = np.mean(holdout_recon, axis=0)
-        sd_holdout = np.std(holdout_recon, axis=0)
-        z_scores = (cohort_recon - mean_holdout)/sd_holdout
-        pvals = norm.sf(z_scores)
-        count = (pvals <= thresh).sum()
-        ratio = count/cohort_recon.shape[0]
-        df = pd.DataFrame(np.array([key+title, count, ratio]).reshape(1,-1),
+        thresh = 0.05/cohort_recon.shape[1]
+
+        mean_train = np.mean(train_recon, axis=0)
+        sd_train = np.std(train_recon, axis=0)
+        z_scores_cohort = (cohort_recon - mean_train)/sd_train
+        z_scores_holdout = (holdout_recon - mean_train)/sd_train
+        pvals_cohort = norm.sf(z_scores_cohort)
+        pvals_holdout = norm.sf(z_scores_holdout)
+        
+        count_cohort = np.any(pvals_cohort<=thresh, axis=1).sum()
+        count_holdout = np.any(pvals_holdout<=thresh, axis=1).sum()
+
+        ratio_cohort = count_cohort/pvals_cohort.shape[0]
+        ratio_holdout = count_holdout/pvals_holdout.shape[0]
+        ratio = ratio_cohort/ratio_holdout
+        
+        df = pd.DataFrame(np.array([key+title, count_cohort, ratio_cohort, count_holdout, ratio_holdout, ratio]).reshape(1,-1),
         columns=cols)
     else:  
         thresh = 0.001
         dists = calc_robust_mahalanobis_distance(cohort_recon, train_recon)
-        pvals_cohort = pvals = 1 - chi2.cdf(dists, cohort_recon.shape[1] - 1)
+        pvals_cohort = 1 - chi2.cdf(dists, cohort_recon.shape[1] - 1)
+        
         dists = calc_robust_mahalanobis_distance(holdout_recon, train_recon)
-        pvals_holdout = pvals = 1 - chi2.cdf(dists, cohort_recon.shape[1] - 1)
+        pvals_holdout = 1 - chi2.cdf(dists, cohort_recon.shape[1] - 1)
+        
 
         count_cohort = (pvals_cohort <= thresh).sum()
         count_holdout = (pvals_holdout <= thresh).sum()
-
         ratio_cohort = count_cohort/pvals_cohort.shape[0]
         ratio_holdout = count_holdout/pvals_holdout.shape[0]
         ratio = ratio_cohort/ratio_holdout
@@ -131,7 +139,7 @@ test = np.concatenate((mri_test, dti_test), axis=1)
 
 #load models and predict latents for each cohort 
 
-date = 'date/of/model/training'
+date = 'date'
 
 model_dict = {'mVAE': './results/mVAE/{0}'.format(date),
 'weighted_mVAE': './results/weighted_mVAE/{0}'.format(date),
@@ -148,7 +156,7 @@ dti_df = pd.DataFrame(columns = dti_cols)
 
 zscore = False
 if zscore:
-    cols = ['model', 'count cohort', 'ratio cohort']
+    cols = ['model', 'count cohort', 'ratio cohort', 'count holdout', 'ratio holdout', 'cohort/holdout ratio']
 else:
     cols = ['model', 'count cohort', 'ratio cohort', 'count holdout', 'ratio holdout', 'cohort/holdout ratio']
 results_df = pd.DataFrame(columns=cols)
@@ -161,34 +169,28 @@ for key, val in model_dict.items():
         dev_holdout = deviation(holdout, holdout_recon[0][0])
         dev_test = deviation(test, test_recon[0][0])
         dev_train = deviation(train, train_recon[0][0])
-        mri_dev_holdout, dti_dev_holdout = dev_holdout[:, 0:len(mri_cols)-1], dev_holdout[:, len(mri_cols)-1:]
-        mri_dev_test, dti_dev_test = dev_test[:, 0:len(mri_cols)-1], dev_test[:, len(mri_cols)-1:]
-        mri_dev_train, dti_dev_train = dev_train[:, 0:len(mri_cols)-1], dev_train[:, len(mri_cols)-1:]
 
-        results = deviation_sig_count(mri_dev_test, mri_dev_holdout, mri_dev_train, key, cols, title='_mri',zscore=zscore)
-        results_df = pd.concat([results_df, results], axis=0)
-        results = deviation_sig_count(dti_dev_test, dti_dev_holdout, dti_dev_train, key, cols, title='_dti',zscore=zscore)
+        results = deviation_sig_count(dev_test, dev_holdout, dev_train, key, cols, zscore=zscore)
         results_df = pd.concat([results_df, results], axis=0)
 
     elif key == 'mVAE_t1':
         train_recon = model.predict_reconstruction(mri_train)
         holdout_recon = model.predict_reconstruction(mri_holdout)
         test_recon = model.predict_reconstruction(mri_test)
-        mri_dev_holdout = deviation(mri_holdout, holdout_recon[0][0])
-        mri_dev_test = deviation(mri_test, test_recon[0][0])
-        mri_dev_train = deviation(mri_train, train_recon[0][0])
-        results = deviation_sig_count(mri_dev_test, mri_dev_holdout, mri_dev_train, key, cols, title='_mri', zscore=zscore)
+        dev_holdout = deviation(mri_holdout, holdout_recon[0][0])
+        dev_test = deviation(mri_test, test_recon[0][0])
+        dev_train = deviation(mri_train, train_recon[0][0])
+        results = deviation_sig_count(dev_test, dev_holdout, dev_train, key, cols, zscore=zscore)
         results_df = pd.concat([results_df, results], axis=0)
 
     elif key == 'mVAE_dti':
         train_recon = model.predict_reconstruction(dti_train)
         holdout_recon = model.predict_reconstruction(dti_holdout)
         test_recon = model.predict_reconstruction(dti_test)
-        dti_dev_holdout = deviation(dti_holdout, holdout_recon[0][0])
-        dti_dev_test = deviation(dti_test, test_recon[0][0])
-        dti_dev_train = deviation(dti_train, train_recon[0][0])
-
-        results = deviation_sig_count(dti_dev_test, dti_dev_holdout, dti_dev_train, key, cols, title='_dti', zscore=zscore)
+        dev_holdout = deviation(dti_holdout, holdout_recon[0][0])
+        dev_test = deviation(dti_test, test_recon[0][0])
+        dev_train = deviation(dti_train, train_recon[0][0])
+        results = deviation_sig_count(dev_test, dev_holdout, dev_train, key, cols, zscore=zscore)
         results_df = pd.concat([results_df, results], axis=0)
 
     elif key == 'mmVAE':
@@ -203,12 +205,12 @@ for key, val in model_dict.items():
         mri_dev_test = deviation(mri_test, test_recon[0][0])
         dti_dev_test = deviation(dti_test, test_recon[1][1])
         dti_dev_train = deviation(dti_train, train_recon[1][1])
+        dev_test = np.concatenate((mri_dev_test, dti_dev_test), axis=1)
+        dev_holdout = np.concatenate((mri_dev_holdout, dti_dev_holdout), axis=1)
+        dev_train = np.concatenate((mri_dev_train, dti_dev_train), axis=1)
 
-        results = deviation_sig_count(mri_dev_test, mri_dev_holdout, mri_dev_train, key, cols, title='_mri',zscore=zscore)
+        results = deviation_sig_count(dev_test, dev_holdout, dev_train, key, cols,zscore=zscore)
         results_df = pd.concat([results_df, results], axis=0)
-        results = deviation_sig_count(dti_dev_test, dti_dev_holdout, dti_dev_train, key, cols, title='_dti',zscore=zscore)
-        results_df = pd.concat([results_df, results], axis=0)
-
     else:
         train_recon = model.predict_reconstruction(mri_train, dti_train)
         holdout_recon = model.predict_reconstruction(mri_holdout, dti_holdout)
@@ -223,11 +225,12 @@ for key, val in model_dict.items():
         mri_dev_train = deviation(mri_train, train_recon[0][0])
         dti_dev_train = deviation(dti_train, train_recon[0][1])
 
-        results = deviation_sig_count(mri_dev_test, mri_dev_holdout, mri_dev_train, key, cols, title='_mri',zscore=zscore)
-        results_df = pd.concat([results_df, results], axis=0)
-        results = deviation_sig_count(dti_dev_test, dti_dev_holdout, dti_dev_train, key, cols, title='_dti',zscore=zscore)
-        results_df = pd.concat([results_df, results], axis=0)
+        dev_test = np.concatenate((mri_dev_test, dti_dev_test), axis=1)
+        dev_holdout = np.concatenate((mri_dev_holdout, dti_dev_holdout), axis=1)
+        dev_train = np.concatenate((mri_dev_train, dti_dev_train), axis=1)
 
+        results = deviation_sig_count(dev_test, dev_holdout, dev_train, key, cols, zscore=zscore)
+        results_df = pd.concat([results_df, results], axis=0)
 if zscore:
     results_df.to_csv('./results/Significance_results_data_zscore_{0}.csv'.format(date), header=True, index=False)
 else:
