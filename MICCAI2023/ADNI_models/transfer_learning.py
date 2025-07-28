@@ -1,11 +1,10 @@
-#fine-tine models trained on ukbb on adni data
+#fine-tune models trained on ukbb on adni data
 
 import pandas as pd 
 from os.path import join 
 import numpy as np
 import torch
 import os
-import numpy as np
 
 DATA_PATH = '../../ADNI_data/splines_regression'
 
@@ -15,8 +14,8 @@ dti_data = pd.read_csv(join(DATA_PATH, 'dti/230224/dti_data_adjusted.csv'), head
 
 non_data_cols = ['FID', 'IID', 'RID', 'iAGE', 'ICV', 'DX_bl', 'PTGENDER'] 
 covariates = mri_data[non_data_cols]
-mri_data = mri_data[mri_data.columns.drop(non_data_cols)]
-dti_data = dti_data[dti_data.columns.drop(non_data_cols)]
+mri_data = mri_data[mri_data.columns.drop(non_data_cols), errors='ignore']
+dti_data = dti_data[dti_data.columns.drop(non_data_cols), errors='ignore']
 
 to_drop_dti = ['FA.FX', 'MD.FX']
 dti_data = dti_data[dti_data.columns.drop(to_drop_dti)]
